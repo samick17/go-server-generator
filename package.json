@@ -1,0 +1,20 @@
+{
+  "name": "go-server-generator",
+  "version": "1.0.0",
+  "description": "GoLang web server generator in nodejs",
+  "main": "index.js",
+  "scripts": {
+    "start": "iojs index.js",
+    "test": "node_modules/.bin/mocha -w"
+  },
+  "keywords": [
+    "go",
+    "httpserver",
+    "server-generator"
+  ],
+  "dependencies": {
+    "should": "7.0.4"
+  },
+  "author": "samick hsu, Henry Hsieh",
+  "license": "MIT"
+}
