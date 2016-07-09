@@ -8,4 +8,5 @@ pipelines:
         script: # Modify the commands below to build your repository.
           - npm --version
           - npm install
+          - npm install -g mocha
           - npm test
