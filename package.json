@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "iojs index.js",
-    "test": "node_modules/.bin/mocha -w"
+    "test": "node_modules/.bin/mocha"
   },
   "keywords": [
     "go",

@@ -46,22 +46,22 @@ function generateBaseHttpServerCode(config) {
       code += format('    "%s"\n', imp);
     }
     code += ')\n\n';
-/*main func*/
-var mainFuncBody = '';
-for(var apiName in config.api) {
-  var apiConfig = config.api[apiName];
-  var handler = GoModelFactory.createHandler(apiName, apiConfig);
-  code += handler.mainHandlerMethod.toString();
-  code += '\n\n';
-  code += handler.apiSubHandlerMethod.join('\n\n');
-  code += '\n\n';
-  mainFuncBody += genHttpRouteListener(apiName, apiName);
-}
-mainFuncBody += genHttpListenCode(config.server.port);
-var mainMethod = GoModelFactory.createMethod('main');
-mainMethod.appendBody(mainFuncBody);
-code += mainMethod.toString();
-return code;
+  /*main func*/
+  var mainFuncBody = '';
+  for(var apiName in config.api) {
+    var apiConfig = config.api[apiName];
+    var handler = GoModelFactory.createHandler(apiName, apiConfig);
+    code += handler.mainHandlerMethod.toString();
+    code += '\n\n';
+    code += handler.apiSubHandlerMethod.join('\n\n');
+    code += '\n\n';
+    mainFuncBody += genHttpRouteListener(apiName, apiName);
+  }
+  mainFuncBody += genHttpListenCode(config.server.port);
+  var mainMethod = GoModelFactory.createMethod('main');
+  mainMethod.appendBody(mainFuncBody);
+  code += mainMethod.toString();
+  return code;
 }
 
 /*config exmaple*/
