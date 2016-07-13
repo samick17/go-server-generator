@@ -22,45 +22,41 @@ function writeFile(folder, name, text) {
   });
 }
 
-function genHttpRouteListener(routeName, apiName) {
-  return format('    http.HandleFunc("/%s", %s)\n', routeName, apiName+'Handler');
+function genHttpRouteListener(routeHandler, routeName, apiName) {
+  return format('    http.HandleFunc("/%s", routes.%s())\n', routeName, routeHandler.name);
 }
 
-function genHttpListenCode(port) {
+function genHttpListenerCode(port) {
   return format('    err := http.ListenAndServe(":%s", nil)\n'+
    '    if err != nil {\n'+
    '        panic(":" + err.Error())\n'+
    '    }', port)
 }
 
-function generateBaseHttpServerCode(config) {
-  var code = '';
-  const goServerConfig = {
-    package: 'main',
-    import: ['net/http', 'fmt']
-  };
-  code += format('package %s\n\n', goServerConfig.package);
-  code += format('import (\n');
-    for(var i in goServerConfig.import) {
-      var imp = goServerConfig.import[i];
-      code += format('    "%s"\n', imp);
-    }
-    code += ')\n\n';
+function generateBaseHttpServerCode(config, wfCallback) {
+  var goFile = GoModelFactory.createFile('main', 'main');
+  goFile.importModule('net/http');
+  goFile.importModule('./routes');
   /*main func*/
   var mainFuncBody = '';
-  for(var apiName in config.api) {
-    var apiConfig = config.api[apiName];
-    var handler = GoModelFactory.createHandler(apiName, apiConfig);
-    code += handler.mainHandlerMethod.toString();
-    code += '\n\n';
-    code += handler.apiSubHandlerMethod.join('\n\n');
-    code += '\n\n';
-    mainFuncBody += genHttpRouteListener(apiName, apiName);
+  
+  if(wfCallback) {
+    wfCallback('./output', 'main', '');
   }
-  mainFuncBody += genHttpListenCode(config.server.port);
+  for(var apiName in config.api) {
+    var handlerCode = '';
+    var apiConfig = config.api[apiName];  
+    var handler = GoModelFactory.createHandler(apiName, apiConfig, wfCallback);
+    mainFuncBody += genHttpRouteListener(handler, apiName, apiName);
+  }
+  mainFuncBody += genHttpListenerCode(config.server.port);
   var mainMethod = GoModelFactory.createMethod('main');
   mainMethod.appendBody(mainFuncBody);
-  code += mainMethod.toString();
+  goFile.addMethod(mainMethod);
+  var code = goFile.toString();
+  if(wfCallback) {
+    wfCallback('./output', 'main', code);
+  }
   return code;
 }
 
@@ -86,10 +82,9 @@ config: {
   }
 }
 */
-function generate(config) {
+function generate(config, writeToFile) {
   if(config) {
-    var code = generateBaseHttpServerCode(config);
-    writeFile('./output', 'main', code);
+    var code = generateBaseHttpServerCode(config, writeToFile ? writeFile : null);
     return code;
   }
   else {
@@ -102,6 +97,15 @@ module.exports = {
 };
 
 /*here goes the sample for generating by config*/
+/*var handler = GoModelFactory.createHandler('book', 
+      {
+        get: {},
+        put: {},
+        post: {},
+        delete: {}
+      });
+console.log(handler.mainHandlerMethod.toString());
+console.log(handler.apiSubHandlerMethod[0].toString());*/
 /*
 (function() {
   generate({
@@ -122,6 +126,6 @@ module.exports = {
         delete: {}
       }
     }
-  });
+  }, true);
 })();
 */
