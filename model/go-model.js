@@ -63,13 +63,3 @@ module.exports = {
   GoMethod: GoMethod,
   GoFile: GoFile
 };
-/*
-var mainFile = new GoFile();
-
-mainFile.setPackage('main');
-mainFile.importModule('fmt');
-
-var m1 = new GoMethod('main');
-m1.appendBody('fmt.Println("Oh my god!")'.padRight());
-mainFile.addMethod(m1);
-console.log(mainFile.toString());*/

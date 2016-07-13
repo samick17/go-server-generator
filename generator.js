@@ -60,28 +60,6 @@ function generateBaseHttpServerCode(config, wfCallback) {
   return code;
 }
 
-/*config exmaple*/
-/*
-config: {
-  server: {
-    port: 80
-  },
-  api: {
-    author: {
-      get: {},
-      put: {},
-      post: {},
-      delete: {}
-    },
-    book: {
-      get: {},
-      put: {},
-      post: {},
-      delete: {}
-    }
-  }
-}
-*/
 function generate(config, writeToFile) {
   if(config) {
     var code = generateBaseHttpServerCode(config, writeToFile ? writeFile : null);
@@ -95,37 +73,3 @@ function generate(config, writeToFile) {
 module.exports = {
   generate: generate
 };
-
-/*here goes the sample for generating by config*/
-/*var handler = GoModelFactory.createHandler('book', 
-      {
-        get: {},
-        put: {},
-        post: {},
-        delete: {}
-      });
-console.log(handler.mainHandlerMethod.toString());
-console.log(handler.apiSubHandlerMethod[0].toString());*/
-/*
-(function() {
-  generate({
-    server: {
-      port: 80
-    },
-    api: {
-      book: {
-        get: {},
-        put: {},
-        post: {},
-        delete: {}
-      },
-      author: {
-        get: {},
-        put: {},
-        post: {},
-        delete: {}
-      }
-    }
-  }, true);
-})();
-*/
