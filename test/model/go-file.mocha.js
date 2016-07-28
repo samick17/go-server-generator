@@ -15,7 +15,7 @@ describe('Supposed go model', function() {
     m1.appendBody('fmt.Println("Oh my god!")'.padRight());
     mainFile.addMethod(m1);
     
-    mainFile.toString().should.equal('package main\n\nimport(\n    "fmt"\n)\n func main() {\n    fmt.Println("Oh my god!")\n}');
+    mainFile.toString().should.equal('package main\n\nimport(\n    "fmt"\n)\n\nfunc main() {\n    fmt.Println("Oh my god!")\n}');
     done();
   });
 });
