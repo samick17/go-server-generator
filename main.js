@@ -1,6 +1,10 @@
 const Generator = require('./generator');
 
 var config = {
+  db: {
+    name: 'myBookcase',
+    url: '127.0.0.1'
+  },
   server: {
     port: 80
   },
@@ -11,8 +15,14 @@ var config = {
       post: {},
       delete: {}
     }
+  },
+  model: {
+    book: {
+      name: {type: "string", default: ""},
+      author: {type: "ObjectId", required: true},
+    }
   }
 };
 
-var code = Generator.generate(config, true);
-console.log(code);
+var writeToFile = true;
+Generator.generate(config, writeToFile);
