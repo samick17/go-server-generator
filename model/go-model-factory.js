@@ -6,7 +6,8 @@ const GoMethodCaller = GoModel.GoMethodCaller;
 const GoMethod = GoModel.GoMethod;
 const GoStructField = GoModel.GoStructField;
 const GoStruct = GoModel.GoStruct;
-const format = require('util').format;
+const GUtils = require('../utils');
+require('../str-prototype');
 
 function createFile(packageName, name) {
   var goFile = new GoFile(name);
@@ -211,112 +212,165 @@ function createRouter(wfCallback) {
   popupNodeMethod.padRight();
   goFile.addMethod(popupNodeMethod);
 
+  var badRequestHandlerMethod = createMethod('BadRequestHandler', [createArg('w', 'http.ResponseWriter')]);
+  badRequestHandlerMethod.appendBody('if r := recover(); r != nil {\n      http.Error(w, "Invalid operation", 400)\n    }');
+  badRequestHandlerMethod.padRight();
+  goFile.addMethod(badRequestHandlerMethod);
+
   if(wfCallback) {
     wfCallback('./output/'+goFile.package, goFile.name, goFile.toString());
   }
 }
+/**/
+function generateGetHandlerMethod(apiName, modelConfig) {
+  var method = createMethod('Handle{0}Get'.format(apiName.toNameCase()), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
+  if(modelConfig) {
+    method.appendBody('defer BadRequestHandler(w)\njsonModel, _ := json.Marshal(db.Get{0}s())\nfmt.Fprint(w, string(jsonModel))'.format(apiName.toNameCase()));
+  }
+  else {
+    method.appendBody('fmt.Fprint(w, "GET {0}")'.format(apiName));
+  }
+  method.padRight();
+  return method;
+}
+/**/
+function generatePutHandlerMethod(apiName, modelConfig) {
+  var method = createMethod('Handle{0}Put'.format(apiName.toNameCase()), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
+  if(modelConfig) {
+    method.appendBody('defer BadRequestHandler(w)\nid := p.Get("id")\nmodel := convertTo{0}(r.Body)\nnewModel := db.Update{1}ById(id, model.ToBson())\njsonModel, _ := json.Marshal(newModel)\nfmt.Fprint(w, string(jsonModel))'.format(apiName.toNameCase(), apiName.toNameCase()));
+  }
+  else {
+    method.appendBody('fmt.Fprint(w, "PUT {0}")'.format(apiName));
+  }
+  method.padRight();
+  return method;
+}
+/**/
+function generatePostHandlerMethod(apiName, modelConfig) {
+  var method = createMethod('Handle{0}Post'.format(apiName.toNameCase()), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
+  if(modelConfig) {
+    method.appendBody('defer BadRequestHandler(w)\nmodel := convertTo{0}(r.Body)\nnewModel := model.Create()\njsonModel, _ := json.Marshal(newModel)\nfmt.Fprint(w, string(jsonModel))'.format(apiName.toNameCase()));
+  }
+  else {
+    method.appendBody('fmt.Fprint(w, "POST {0}")'.format(apiName));
+  }
+  method.padRight();
+  return method;
+}
+/**/
+function generateDeleteHandlerMethod(apiName, modelConfig) {
+  var method = createMethod('Handle{0}Delete'.format(apiName.toNameCase()), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
+  if(modelConfig) {
+    method.appendBody('defer BadRequestHandler(w)\nid := p.Get("id")\ndb.Remove{0}ById(id)\nfmt.Fprint(w, "")'.format(apiName.toNameCase()));
+  }
+  else {
+    method.appendBody('fmt.Fprint(w, "DELETE {0}")'.format(apiName));
+  }
+  method.padRight();
+  return method;
+}
+function generateNestedHandlerMethod(nestedHandlerNameArray, callback) {
+  var methods = [];
+  for(var i in nestedHandlerNameArray) {
+    methods.push(callback(nestedHandlerNameArray[i]));
+  }
+  return methods;
+}
+/**/
+function generateNestedGetHandlerMethod(nestedHandlerNameArray) {
+  return generateNestedHandlerMethod(nestedHandlerNameArray, function(data) {
+    var method = createMethod('Handle{0}Get'.format(data.name), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
+    method.appendBody('defer BadRequestHandler(w)\n{0} := p.Get("{1}")\njsonModel, _ := json.Marshal(db.Get{2}sBy(bson.M{"{3}": bson.ObjectIdHex({4})}))\nfmt.Fprint(w, string(jsonModel))'.format(data.parentId, data.parentId, data.child.toNameCase(), data.parent, data.parentId));
+    method.padRight();
+    return method;
+  });
+}
 
-function createHandler(apiName, modelMethods, apiConfig, modelConfig, wfCallback) {
+function generateNestedPutHandlerMethod(nestedHandlerNameArray) {
+  return generateNestedHandlerMethod(nestedHandlerNameArray, function(data) {
+    var method = createMethod('Handle{0}Put'.format(data.name), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
+    method.appendBody('defer BadRequestHandler(w)\n{0} := p.Get("{1}")\n{2} := p.Get("{3}")\nmodel := convertTo{4}(r.Body)\nnewModel := db.Update{5}By(bson.M{"_id": bson.ObjectIdHex({6}), "{7}": bson.ObjectIdHex({8})}, model.ToBson())\njsonModel, _ := json.Marshal(newModel)\nfmt.Fprint(w, string(jsonModel))'.format(data.parentId, data.parentId, data.childId, data.childId, data.child.toNameCase(), data.child.toNameCase(), data.childId, data.parent, data.parentId));
+    method.padRight();
+    return method;
+  });
+}
+
+function generateNestedPostHandlerMethod(nestedHandlerNameArray) {
+  return generateNestedHandlerMethod(nestedHandlerNameArray, function(data) {
+    var method = createMethod('Handle{0}Post'.format(data.name), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
+    method.appendBody('defer BadRequestHandler(w)\n{0} := p.Get("{1}")\nmodel := convertTo{2}(r.Body)\nmodel.{3} = bson.ObjectIdHex({4})\nnewModel := model.Create()\njsonModel, _ := json.Marshal(newModel)\nfmt.Fprint(w, string(jsonModel))'.format(data.parentId, data.parentId, data.child.toNameCase(), data.parent.toNameCase(), data.parentId));
+    method.padRight();
+    return method;
+  });
+}
+
+function generateNestedDeleteHandlerMethod(nestedHandlerNameArray) {
+  return generateNestedHandlerMethod(nestedHandlerNameArray, function(data) {
+    var method = createMethod('Handle{0}Delete'.format(data.name), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
+    method.appendBody('defer BadRequestHandler(w)\n{0} := p.Get("{1}")\n{2} := p.Get("{3}")\ndb.Remove{4}By(bson.M{"_id": bson.ObjectIdHex({5}), "{6}": bson.ObjectIdHex({7})})\nfmt.Fprint(w, "")'.format(data.parentId, data.parentId, data.childId, data.childId, data.child.toNameCase(), data.childId, data.parent, data.parentId));
+    method.padRight();
+    return method;
+  });
+}
+
+function createHandler(apiName, apiConfig, modelConfig, wfCallback) {
   var code = '';
   var goFile = createFile('routes', apiName);
   goFile.importModule('net/http');
   goFile.importModule('fmt');
+  var nestedHandlerNameArray = createNestedHandlerNameArray(apiName, apiConfig, modelConfig);
   if(modelConfig) {
     goFile.importModule('../db');
     goFile.importModule('encoding/json');
     goFile.importModule('io');
-    goFile.importModule('strings');
+    if(nestedHandlerNameArray.length > 0) {
+      goFile.importModule('gopkg.in/mgo.v2/bson');
+    }
   }
-
-  var handlerBody = '';
-  var isHead = true;
-  var subHandlerConfigArray = [];
-
-  var convertToModelMethod = createMethod(format('convertTo%s', apiName.toNameCase()), [createArg('reader', 'io.Reader')], format('*db.%s', apiName.toNameCase()));
-  convertToModelMethod.appendBody(format('decoder := json.NewDecoder(reader)\nvar model db.%s\nerr := decoder.Decode(&model)\nif err != nil {\n  panic(err)\n}\nreturn &model', apiName.toNameCase()));
+  var convertToModelMethod = createMethod('convertTo{0}'.format(apiName.toNameCase()), [createArg('reader', 'io.Reader')], '*db.{0}'.format(apiName.toNameCase()));
+  convertToModelMethod.appendBody('decoder := json.NewDecoder(reader)\nvar model db.{0}\nerr := decoder.Decode(&model)\nif err != nil {\n  panic(err)\n}\nreturn &model'.format(apiName.toNameCase()));
   convertToModelMethod.padRight();
   goFile.addMethod(convertToModelMethod);
 
   if(apiConfig.get) {
-    var getMethod = createMethod(format('Handle%sGet', apiName.toNameCase()), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
-    if(modelConfig) {
-      getMethod.appendBody(format('jsonModel, _ := json.Marshal(db.Get%ss())\nfmt.Fprint(w, string(jsonModel))', apiName.toNameCase()));
-    }
-    else {
-      getMethod.appendBody(format('fmt.Fprint(w, "GET %s")', apiName));
-    }
-    getMethod.padRight();
+    var getMethod = generateGetHandlerMethod(apiName, modelConfig);
     goFile.addMethod(getMethod);
+    var nestedGetMethods = generateNestedGetHandlerMethod(nestedHandlerNameArray);
+    goFile.addMethods(nestedGetMethods);
   }
   if(apiConfig.put) {
-    var putMethod = createMethod(format('Handle%sPut', apiName.toNameCase()), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
-    if(modelConfig) {
-      putMethod.appendBody(format('id := strings.Split(r.URL.Path, "/")[2]\nmodel := convertTo%s(r.Body)\nnewModel := db.Update%sById(id, model.ToBson())\njsonModel, _ := json.Marshal(newModel)\nfmt.Fprint(w, string(jsonModel))', apiName.toNameCase(), apiName.toNameCase()));
-    }
-    else {
-      putMethod.appendBody(format('fmt.Fprint(w, "PUT %s")', apiName));
-    }
-    putMethod.padRight();
+    var putMethod = generatePutHandlerMethod(apiName, modelConfig);
     goFile.addMethod(putMethod);
+    var nestedPutMethods = generateNestedPutHandlerMethod(nestedHandlerNameArray);
+    goFile.addMethods(nestedPutMethods);
   }
   if(apiConfig.post) {
-    var postMethod = createMethod(format('Handle%sPost', apiName.toNameCase()), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
-    if(modelConfig) {
-      postMethod.appendBody(format('model := convertTo%s(r.Body)\nnewModel := model.Create()\njsonModel, _ := json.Marshal(newModel)\nfmt.Fprint(w, string(jsonModel))', apiName.toNameCase()));
-    }
-    else {
-      postMethod.appendBody(format('fmt.Fprint(w, "POST %s")', apiName));
-    }
-    postMethod.padRight();
+    var postMethod = generatePostHandlerMethod(apiName, modelConfig);
     goFile.addMethod(postMethod);
+    var nestedPostMethods = generateNestedPostHandlerMethod(nestedHandlerNameArray);
+    goFile.addMethods(nestedPostMethods);
   }
   if(apiConfig.delete) {
-    var deleteMethod = createMethod(format('Handle%sDelete', apiName.toNameCase()), [createArg('w', 'http.ResponseWriter'), createArg('r', '*http.Request'), createArg('p', 'Params')]);
-    if(modelConfig) {
-      deleteMethod.appendBody(format('id := strings.Split(r.URL.Path, "/")[2]\ndb.Remove%sById(id)\nfmt.Fprint(w, "")', apiName.toNameCase()));
-    }
-    else {
-      deleteMethod.appendBody(format('fmt.Fprint(w, "DELETE %s")', apiName));
-    }
-    deleteMethod.padRight();
+    var deleteMethod = generateDeleteHandlerMethod(apiName, modelConfig);
     goFile.addMethod(deleteMethod);
+    var nestedDeleteMethods = generateNestedDeleteHandlerMethod(nestedHandlerNameArray);
+    goFile.addMethods(nestedDeleteMethods);
   }
-  /*for(var handlerMethod in apiConfig) {
-    var config = apiConfig[handlerMethod];
-    var syntax = '';
-    if(!isHead) {
-      syntax = ' else ';
-    }
-    var handlerName = format('Handle%s%s', apiName.toNameCase(), handlerMethod.toNameCase());
-    syntax += format('if r.Method == "%s" {\n    %s(w, r)\n}', handlerMethod.toUpperCase(), handlerName);
-    isHead = false;
-    handlerBody += syntax;
-    subHandlerConfigArray.push({
-      methodName: handlerName,
-      apiName: apiName,
-      method: handlerMethod,
-      config: config
-    });
-  }
-  var subHandlerMethods = createSubHandler(subHandlerConfigArray);
-  goFile.addMethods(subHandlerMethods);*/
   if(wfCallback) {
     wfCallback('./output/'+goFile.package, goFile.name, goFile.toString());
   }
 }
 
-function createSubHandler(subHandlerConfigArray) {
-  var apiSubHandlerMethod = [];
-  for(var idx in subHandlerConfigArray) {
-    var subHandlerConfig = subHandlerConfigArray[idx];
-    var goMethod = createMethod(subHandlerConfig.methodName);
-    goMethod.appendArg('w', 'http.ResponseWriter');
-    goMethod.appendArg('r', '*http.Request');
-    goMethod.appendArg('p', 'Params');
-    goMethod.appendBody(format('    fmt.Fprint(w, "%s %s")', subHandlerConfig.method.toUpperCase(), subHandlerConfig.apiName));
-    apiSubHandlerMethod.push(goMethod);
+function createNestedHandlerNameArray(apiName, apiConfig, modelConfig) {
+  var nestedHandlerNameArray = [];
+  for(var i in modelConfig) {
+    var field = modelConfig[i];
+    if(field.parent) {
+      var dict = {parent: field.parent, parentId: '{0}Id'.format(field.parent), child: apiName, childId: '{0}Id'.format(apiName), name: GUtils.generateRouteName([field.parent, apiName])};
+      nestedHandlerNameArray.push(dict);
+    }
   }
-  return apiSubHandlerMethod;
+  return nestedHandlerNameArray;
 }
 
 module.exports = {
@@ -326,6 +380,6 @@ module.exports = {
   createArg: createArg,
   createMethodCaller: createMethodCaller,
   createMethod: createMethod,
-  createHandler: createHandler,
   createRouter: createRouter,
+  createHandler: createHandler
 };

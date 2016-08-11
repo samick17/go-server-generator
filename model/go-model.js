@@ -1,4 +1,3 @@
-const format = require('util').format;
 require('../str-prototype');
 
 function values(obj) {
@@ -23,9 +22,9 @@ function GoStructField(name, type, bsonJsonName) {
 
 GoStructField.prototype.toString = function() {
   if(this.bsonJsonName)
-    return format('    %s %s `json:"%s,omitempty" bson:"%s,omitempty"`', this.name.toNameCase(), this.type, this.bsonJsonName, this.bsonJsonName);  
+    return '    {0} {1} `json:"{2},omitempty" bson:"{3},omitempty"`'.format(this.name.toNameCase(), this.type, this.bsonJsonName, this.bsonJsonName);  
   else
-    return format('    %s %s', this.name, this.type);
+    return '    {0} {1}'.format(this.name, this.type);
 };
 
 function GoStruct(name, fields) {
@@ -42,7 +41,7 @@ GoStruct.prototype.addFieldByValue = function(name, type, bsonJsonName) {
 };
 
 GoStruct.prototype.toString = function() {
-  return format('type %s struct {\n%s\n}', this.name.toNameCase(), this.fields.join('\n'));
+  return 'type {0} struct {\n{1}\n}'.format(this.name.toNameCase(), this.fields.join('\n'));
 };
 
 function GoMethodArg(name, type) {
@@ -51,7 +50,7 @@ function GoMethodArg(name, type) {
 }
 
 GoMethodArg.prototype.toString = function() {
-  return format('%s %s', this.name, this.type);
+  return '{0} {1}'.format(this.name, this.type);
 };
 
 function GoMethodCaller(name, type) {
@@ -61,7 +60,7 @@ function GoMethodCaller(name, type) {
 
 GoMethodCaller.prototype.toString = function() {
   if(this.name && this.type)
-    return format('(%s %s)', this.name, this.type);
+    return '({0} {1})'.format(this.name, this.type);
   else
     return '';
 };
@@ -94,7 +93,7 @@ GoMethod.prototype.toString = function() {
   var callerText = this.caller ? ' '+this.caller.toString() : '';
   var name =  this.name ? ' ' + this.name : '';
   var returnType = this.returnType ? ' ' + this.returnType : '';
-  return format('func%s%s(%s)%s {\n%s}', callerText, name, arg, returnType, this.body);
+  return 'func{0}{1}({2}){3} {\n{4}}'.format(callerText, name, arg, returnType, this.body);
 };
 
 function GoConst(name, value) {
@@ -103,7 +102,7 @@ function GoConst(name, value) {
 }
 
 GoConst.prototype.toString = function() {
-  return format('    %s = %s', this.name, this.value)
+  return '    {0} = {1}'.format(this.name, this.value)
 };
 
 function GoVar(name, type, value) {
@@ -114,9 +113,9 @@ function GoVar(name, type, value) {
 
 GoVar.prototype.toString = function() {
   if(this.value)
-    return format('var %s = %s', this.name, this.value);
+    return 'var {0} = {1}'.format(this.name, this.value);
   else
-    return format('var %s %s', this.name, this.type);
+    return 'var {0} {1}'.format(this.name, this.type);
 };
 
 function GoFile(name) {
@@ -170,15 +169,15 @@ GoFile.prototype.toString = function() {
   if(moduleKeys.length > 0)
     codeArray.push('import(\n    '+moduleKeys.join('\n    ')+'\n)');
   if(Object.keys(this.typeDefineds).length > 0)
-    codeArray.push(format('%s', values(this.typeDefineds).join('\n')));
+    codeArray.push(values(this.typeDefineds).join('\n'));
   if(Object.keys(this.consts).length > 0)
-    codeArray.push(format('const (\n%s\n)', values(this.consts).join('\n')));
+    codeArray.push('const (\n{0}\n)'.format(values(this.consts).join('\n')));
   if(Object.keys(this.vars).length > 0)
     codeArray.push(values(this.vars).join('\n'));
   if(Object.keys(this.structs).length > 0)
     codeArray.push(values(this.structs).join('\n'));
   codeArray.push(values(this.methods).join('\n\n'));
-  return format('package %s\n\n%s', this.package, codeArray.join('\n\n'));
+  return 'package {0}\n\n{1}'.format(this.package, codeArray.join('\n\n'));
 };
 
 function GoTypeDefined(name, type) {
@@ -187,7 +186,7 @@ function GoTypeDefined(name, type) {
 }
 
 GoTypeDefined.prototype.toString = function() {
-  return format('type %s %s', this.name, this.type)
+  return 'type {0} {1}'.format(this.name, this.type)
 };
 
 module.exports = {

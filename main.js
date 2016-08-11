@@ -1,15 +1,15 @@
 const Generator = require('./generator');
 
-var config = {
+var taskConfig = {
   db: {
-    name: 'myBookcase',
+    name: 'myTaskBoard',
     url: '127.0.0.1'
   },
   server: {
-    port: 80
+    port: 8080
   },
   api: {
-    book: {
+    task: {
       get: {},
       put: {},
       post: {},
@@ -17,12 +17,60 @@ var config = {
     }
   },
   model: {
-    book: {
-      name: {type: "string", default: ""},
-      author: {type: "ObjectId", required: true},
+    task: {
+      board: {type: "ObjectId", parent: "board"},
+      name: {type: "string"}
     }
   }
 };
 
+var boardConfig = {
+  db: {
+    name: 'myTaskBoard',
+    url: '127.0.0.1'
+  },
+  server: {
+    port: 80
+  },
+  api: {
+    board: {
+      get: {},
+      put: {},
+      post: {},
+      delete: {}
+    }
+  },
+  model: {
+    board: {
+      name: {type: "string"}
+    }
+  }
+};
+
+var bookConfig = {
+  "db": {
+    "name": "myBookcase",
+    "url": "127.0.0.1"
+  },
+  "server": {
+    "port": 80
+  },
+  "api": {
+    "book": {
+      "get": {},
+      "put": {},
+      "post": {},
+      "delete": {}
+    }
+  },
+  "model": {
+    "book": {
+      "name": {"type": "string"},
+      "author": {"type": "ObjectId"},
+    }
+  }
+};
 var writeToFile = true;
-Generator.generate(config, writeToFile);
+//Generator.generate(taskConfig, writeToFile);
+//Generator.generate(boardConfig, writeToFile);
+Generator.generate(bookConfig, writeToFile);
