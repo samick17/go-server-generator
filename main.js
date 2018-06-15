@@ -70,7 +70,33 @@ var bookConfig = {
     }
   }
 };
+
+var calculatorConfig = {
+  "db": {
+    "name": "myCalculator",
+    "url": "127.0.0.1"
+  },
+  "server": {
+    "port": 80
+  },
+  "api": {
+    "calculator": {
+      "get": {},
+      "put": {
+        "/:action": {
+          "path": "calculator-action.go"
+        }
+      },
+      "post": {},
+      "delete": {}
+    }
+  },
+  "model": {
+    "calculator": {
+    }
+  }
+};
 var writeToFile = true;
 //Generator.generate(taskConfig, writeToFile);
 //Generator.generate(boardConfig, writeToFile);
-Generator.generate(bookConfig, writeToFile);
+Generator.generate(calculatorConfig, writeToFile);
